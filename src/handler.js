@@ -13,88 +13,116 @@ const helloWorld = async (request, h) => {
 
 const index = async (request, h) => {
   try {
-    const queryName = request.query.name
-    const queryReading = request.query.reading
-    const queryFinished = request.query.finished
-    const newBooks = []
+    const {
+      queryName,
+      queryReading,
+      queryFinished
+    } = request.query
+    let newBooks = books
 
-    if ((queryName !== undefined)) {
-      const search = queryName?.toLowerCase()
-      const filtered = books.filter(book => (book.name).toLowerCase() === search)
-
-      return h.response({
-        message: 'show search result by name',
-        status: 'success',
-        data: {
-          books: filtered
+    if (queryName !== undefined) {
+      const search = queryName.toLowerCase()
+      let filteredBooks = books.filter(book => book.name.toLowerCase().includes(search))
+      let newFilteredObj = filteredBooks.map(function (book){
+        return {
+          name : book.name,
+          publisher : book.publisher
         }
-      }).code(200)
+      })
+      let res = h.response({
+        "status": "success",
+        "data": {
+          "books": newFilteredObj
+        }
+      })
+      res.code(200)
+      return res
     }
 
     if ((queryReading !== undefined)) {
       const search = Boolean(queryReading)
-      const filtered = books.filter(book => book.reading === search)
-
-      return h.response({
-        message: 'show search result by reading',
-        status: 'success',
-        data: {
-          books: filtered
+      let filteredBooks = books.filter(book => book.reading == search)
+      let newFilteredObj = filteredBooks.map(function (book){
+        return {
+          name : book.name,
+          publisher : book.publisher
         }
-      }).code(200)
+      })
+      let res = h.response({
+        "status": "success",
+        "data": {
+          "books": newFilteredObj
+        }
+      })
+      res.code(200)
+      return res
     }
 
     if ((queryFinished !== undefined)) {
       const search = Boolean(queryFinished)
-      const filtered = books.filter(book => book.finished === search)
-
-      return h.response({
-        message: 'show search result by finished',
-        status: 'success',
-        data: {
-          books: filtered
+      let filteredBooks = books.filter(book => book.finished == search)
+      let newFilteredObj = filteredBooks.map(function (book){
+        return {
+          name : book.name,
+          publisher : book.publisher
         }
-      }).code(200)
+      })
+      let res = h.response({
+        "status": "success",
+        "data": {
+          "books": newFilteredObj
+        }
+      })
+      res.code(200)
+      return res
     }
 
-    books.forEach((book) => {
-      const newBook = {}
-      newBook.id = book.id
-      newBook.name = book.name
-      newBook.publisher = book.publisher
-
-      newBooks.push(newBook)
-    })
-
-    return h.response({
-      message: 'show all books',
-      status: 'success',
-      data: {
-        books: newBooks
+    let res = h.response({
+      "status": "success",
+      "data": {
+        "books": newBooks.map(book => ({
+          id : book.id,
+          name : book.name,
+          publisher : book.publisher
+        }))
       }
-    }).code(200)
+    })
+    res.code(200)
+    return res
   } catch (err) {
     console.error(err.message)
+    let res = h.response({
+      "status": "error",
+      "message": "Buku gagal dimuat"
+    })
+    res.code(500)
+    return res
   }
 }
 
 const show = async (request, h) => {
   try {
     const { id } = request.params
-    const book = books.filter(book => book.id === id)
+    const index = books.findIndex(param => param.id === id)
+    let book = books[index]
 
-    if (book.length > 0) {
-      return h.response({
-        message: 'show book details',
-        status: 'success',
-        data: book
-      }).code(200)
+    if (index != -1) {
+      let res = h.response({
+        "status": "success",
+        "data": {
+          book
+        }
+      })
+      res.code(200)
+      return res
     }
 
-    return h.response({
-      message: 'book not found',
-      status: 'fail'
-    }).code(404)
+    let res = h.response({
+      "status": "fail",
+      "message": "Buku tidak ditemukan"
+    })
+    res.code(404)
+    return res
   } catch (err) {
     console.error(err.message)
   }
@@ -102,62 +130,73 @@ const show = async (request, h) => {
 
 const store = async (request, h) => {
   try {
-    const id = nanoid(16)
-    const name = request.payload.name
-    const year = request.payload.year
-    const author = request.payload.author
-    const summary = request.payload.summary
-    const publisher = request.payload.publisher
-    const pageCount = request.payload.pageCount
-    const readPage = request.payload.readPage
-    const finished = pageCount === readPage
-    const reading = request.payload.reading
-    const insertedAt = new Date().toISOString()
-    const updatedAt = insertedAt
-
-    const data = {
-      id,
+    const { 
       name,
-      year: parseInt(year),
+      year,
       author,
       summary,
       publisher,
+      pageCount,
+      readPage,
+      reading
+    } = request.payload
+
+    const data = {
+      id : nanoid(16),
+      name : name,
+      year: parseInt(year),
+      author : author,
+      summary : summary,
+      publisher : publisher,
       pageCount: parseInt(pageCount),
       readPage: parseInt(readPage),
-      finished,
+      finished : pageCount === readPage,
       reading: Boolean(reading),
-      insertedAt,
-      updatedAt
+      insertedAt : new Date().toISOString(),
+      updatedAt : new Date().toISOString()
     }
 
-    if (name === '') {
-      return h.response({
-        status: 'fail',
-        message: 'please fill the book name field'
-      }).code(400)
-    }
+    if (name === undefined) {
+      let res = h.response({
+        "status": "fail",
+        "message": "Gagal menambahkan buku. Mohon isi nama buku"
+      })
+      res.code(400)
+      return res
+    } 
 
     if (data.readPage > data.pageCount) {
-      return h.response({
-        status: 'fail',
-        message: 'invalid reading page'
-      }).code(400)
+      let res = h.response({
+        "status": "fail",
+        "message": "Gagal menambahkan buku. readPage tidak boleh lebih besar dari pageCount"
+      })
+      res.code(400)
+      return res
     }
 
     books.push(data)
     const isSuccess = books.filter(book => book.id === data.id)
 
-    if (isSuccess) {
-      return h.response({
-        status: 'success',
-        message: 'success add new book',
-        data: {
-          bookId: data.id
+    if (isSuccess.length != 0) {
+      let oobjek = {
+        "status": "success",
+        "message": "Buku berhasil ditambahkan",
+        "data": {
+          "bookId": data.id
         }
-      }).code(201)
+      }
+      let res = h.response(oobjek)
+      res.code(201)
+      return res
     }
   } catch (err) {
     console.error(err.message)
+    let res = h.response({
+      "status": "error",
+      "message": "Buku gagal ditambahkan"
+    })
+    res.code(500)
+    return res
   }
 }
 
@@ -174,9 +213,6 @@ const update = async (request, h) => {
     const finished = pageCount === readPage
     const reading = request.payload.reading
     const insertedAt = new Date().toISOString()
-    // const updatedAt = insertedAt
-
-    console.log(name)
 
     const data = {
       name,
@@ -192,20 +228,23 @@ const update = async (request, h) => {
     }
 
     const index = books.findIndex(book => book.id === id)
-    console.log(index)
 
     if ((name === undefined) || (name === '') || (name === null)) {
-      return h.response({
-        status: 'fail',
-        message: 'please fill the book name field'
-      }).code(400)
+      let res = h.response({
+        "status": "fail",
+        "message": "Gagal memperbarui buku. Mohon isi nama buku"
+      })
+      res.code(400)
+      return res
     }
 
     if (data.readPage > data.pageCount) {
-      return h.response({
-        status: 'fail',
-        message: 'invalid reading page'
-      }).code(400)
+      let res = h.response({
+        "status": "fail",
+        "message": "Gagal memperbarui buku. readPage tidak boleh lebih besar dari pageCount"
+      })
+      res.code(400)
+      return res
     }
 
     if (index !== -1) {
@@ -224,17 +263,27 @@ const update = async (request, h) => {
         updatedAt: data.updatedAt
       }
 
-      return h.response({
-        status: 'success',
-        message: 'success update book'
-      }).code(200)
+      let res = h.response({
+        "status": "success",
+        "message": "Buku berhasil diperbarui"
+      })
+      res.code(200)
+      return res
     }
-    return h.response({
-      status: 'fail',
-      message: 'fail updating book, id not found'
-    }).code(404)
+    let res = h.response({
+      "status": "fail",
+      "message": "Gagal memperbarui buku. Id tidak ditemukan"
+    })
+    res.code(404)
+    return res
   } catch (err) {
     console.error(err.message)
+    let res = h.response({
+      "status": "error",
+      "message": "Buku gagal diperbaharui"
+    })
+    res.code(500)
+    return res
   }
 }
 
@@ -246,15 +295,19 @@ const deleteById = async (request, h) => {
     if (index !== -1) {
       books.splice(index, 1)
 
-      return h.response({
-        status: 'success',
-        message: 'success delete book'
-      }).code(200)
+      let res = h.response({
+        "status": "success",
+        "message": "Buku berhasil dihapus"
+      })
+      res.code(200)
+      return res
     }
-    return h.response({
-      status: 'fail',
-      message: 'fail deleting book, id not found'
-    }).code(404)
+    let res = h.response({
+      "status": "fail",
+      "message": "Buku gagal dihapus. Id tidak ditemukan"
+    })
+    res.code(404)
+    return res
   } catch (err) {
     console.error(err.message)
   }
